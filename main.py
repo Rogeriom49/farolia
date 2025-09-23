@@ -7,6 +7,11 @@ from Classes.Task import TaskCreator
 from crewai_tools import DirectorySearchTool
 import streamlit as st
 import time
+import pysqlite3 as sqlite3
+
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 load_dotenv()
 
