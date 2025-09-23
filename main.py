@@ -1,5 +1,5 @@
 import os
-from crewai import Crew, Process
+from crewai import Crew, Process, LLM
 from dotenv import load_dotenv
 from Classes.LLM import LLMCreator 
 from Classes.Agent import AgentCreator
@@ -10,8 +10,6 @@ import time
 
 load_dotenv()
 
-os.environ["OPENAI_API_KEY"] = "dummy-key" 
-
 def stream_data(text):
     for word in text.split(" "):
         yield word + " "
@@ -19,31 +17,15 @@ def stream_data(text):
 
 
 
-llm = LLMCreator(model=os.getenv("MODEL"), key=os.getenv("GEMINI_API_KEY")).create()
+llm = LLMCreator(model=st.secrets.openai['MODEL'], key=st.secrets.openai['OPENAI_API_KEY']).create()
 # transcricao = AudioTranscription(file_path="source/entrega_futura.mp3").transcribe()
 
-directory_serch = DirectorySearchTool(
-    directory='output',
-    file_types=['.md'],
-    config=dict(
-        llm=dict(
-            provider='google',
-            config=dict(
-                model='models/gemini-2.0-flash-001',
-                api_key=os.getenv("GEMINI_API_KEY"),
-            ),
-        ),
-        embedder=dict(
-            provider="google", # or openai, ollama, ...
-            config=dict(
-                model='models/text-embedding-004',
-                # api_key=os.getenv("GEMINI_API_KEY"),
-                task_type="retrieval_document",
-                # title="Embeddings",
-            ),
-        ),
-    )    
-)
+os.environ['OPENAI_API_KEY'] = st.secrets.openai['OPENAI_API_KEY']
+os.environ['MODEL'] = st.secrets.openai['MODEL']
+
+
+directory_serch = DirectorySearchTool(directory='output')
+
 
 researcher_agent = AgentCreator(llm=llm).create(
     role='Pesquisador de Documentos',
@@ -52,7 +34,7 @@ researcher_agent = AgentCreator(llm=llm).create(
     encontrar informações precisas e relevantes nos documentos disponíveis para 
     responder às perguntas dos usuários.""",
     tools=[directory_serch],
-    verbose=True
+    verbose=False
 )
 
 analyst_agent = AgentCreator(llm=llm).create(
@@ -61,7 +43,7 @@ analyst_agent = AgentCreator(llm=llm).create(
     backstory="""Você é um analista experiente que consegue interpretar informações 
     complexas e fornecer respostas claras e bem estruturadas baseadas nos dados 
     disponíveis.""",
-    verbose=True    
+    verbose=False    
 )
 
 researcher_task = TaskCreator(agent=researcher_agent).create(
@@ -94,7 +76,7 @@ crew = Crew(
     agents=[researcher_agent, analyst_agent],
     tasks=[researcher_task, analyst_task],
     process=Process.sequential,
-    verbose=True
+    verbose=False
 )
 
 st.title("Farol IA")
